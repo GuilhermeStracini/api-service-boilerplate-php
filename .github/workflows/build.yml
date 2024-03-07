@@ -1,0 +1,184 @@
+name: Build
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions: write-all
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
+      - name: Install dependencies
+        uses: "php-actions/composer@v6"
+        with:
+          php_extensions: sockets
+          dev: no
+          progress: yes
+          working_dir: "./Src/"
+
+      - name: Create MySQL secrets file
+        run: |
+          cd Src
+          mkdir -p secrets
+          cd secrets
+          echo "<?php" >> mySql.secrets.php
+          echo "\$mySqlHost     = \"database\";" >> mySql.secrets.php
+          echo "\$mySqlUser     = \"test\";" >> mySql.secrets.php
+          echo "\$mySqlPassword = \"test\";" >> mySql.secrets.php
+          echo "\$mySqlDatabase = \"test\";" >> mySql.secrets.php
+
+      - name: Create RabbitMQ secrets file
+        run: |
+          cd Src
+          mkdir -p secrets
+          cd secrets
+          echo "<?php" >> rabbitMq.secrets.php
+          echo "\$rabbitMqConnectionStrings[] = \"amqp://guest:guest@queue:5672/\";" >> rabbitMq.secrets.php
+
+      - name: Docker compose up
+        run: docker-compose up -d
+
+      - name: Wait for database to start
+        run: sleep 10
+
+      - name: Run database migrations
+        id: db_migration
+        env:
+          MYSQL_PWD: test
+        run: |
+          chmod +x Tools/db-migration.sh
+          Tools/db-migration.sh Sql "localhost" "test" "test"
+
+      - name: Check database
+        env:
+          MYSQL_PWD: test
+        run: |
+          chmod +x Tools/db-check.sh
+          Tools/db-check.sh "localhost" "test" "test"
+
+      - name: Install Postman CLI
+        run: |
+          curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+
+      - name: Login to Postman CLI
+        run: postman login --with-api-key ${{ secrets.POSTMAN_API_KEY }}
+
+      - name: Run API tests
+        run: |
+          postman collection run ${{ secrets.POSTMAN_COLLECTION_ID }} -e ${{ secrets.POSTMAN_ENVIRONMENT_ID }} --reporters cli,junit --reporter-junit-export "Tests/ApiTests.xml"
+
+      - name: Test Requests
+        id: test_requests
+        run: |
+          chmod +x Tests/request-tests.sh
+          Tests/request-tests.sh "Tests/Requests"
+
+      - name: Update PR with comment (request tests - failed)
+        if: failure() && steps.test_requests.outputs.error == 'true'
+        uses: mshick/add-pr-comment@v2
+        with:
+          refresh-message-position: true
+          message-id: "requests"
+          message: |
+            :test_tube: **Request tests summary**
+
+            :x: The request tests failed.
+            ${{ steps.test_requests.outputs.requests_failed }}
+
+            <details>
+              <summary>Last failed response</summary>
+
+              ```
+              ${{ steps.test_requests.outputs.response }}
+              
+              ```
+              
+            </details>
+
+      - name: Update PR with comment (request tests - successed)
+        if: success()
+        uses: mshick/add-pr-comment@v2
+        with:
+          refresh-message-position: true
+          message-id: "requests"
+          message: |
+            :test_tube: **Request tests summary**
+
+            :white_check_mark: All test requests succeeded
+
+      - name: Check database
+        env:
+          MYSQL_PWD: test
+        run: |
+          chmod +x Tests/db-integrity.sh
+          Tests/db-integrity.sh "localhost" "test" "test"
+
+      - name: Attach WireGuard connection
+        shell: bash
+        run: |
+          sudo apt install resolvconf
+          sudo apt install wireguard
+          echo "${{ secrets.WIREGUARD_CONFIG }}" > wg0.conf
+          sudo chmod 600 wg0.conf
+          sudo wg-quick up ./wg0.conf        
+
+      - name: Dry Run database migrations
+        if: github.actor != 'dependabot[bot]'
+        continue-on-error: true
+        id: dry_run
+        env:
+          MYSQL_PWD: ${{ secrets.MYSQL_PASSWORD_MIGRATION }}
+        run: |
+          chmod +x Tools/db-migration.sh
+          Tools/db-migration.sh Sql "${{ secrets.MYSQL_SERVER }}" "${{ secrets.MYSQL_USER_MIGRATION }}" "${{ secrets.MYSQL_DATABASE }}" --dry-run
+
+      - name: Detach WireGuard connection
+        shell: bash
+        run: sudo wg-quick down ./wg0.conf
+                
+      - name: Update PR with comment (migration error)
+        if: failure() && env.db_migration_error == 'true'
+        uses: mshick/add-pr-comment@v2
+        with:
+          refresh-message-position: true
+          message-id: "migrations"
+          message: |
+            :game_die: **Database migration summary**
+
+            :x: The database migration plan failed.
+            ${{ steps.db_migration.outputs.error }}
+
+      - name: Update PR with comment (migration steps - changed)
+        if: ${{ steps.dry_run.outputs.files != '' }}
+        uses: mshick/add-pr-comment@v2
+        with:
+          refresh-message-position: true
+          message-id: "migrations"
+          message: |
+            :game_die: **Database migration summary**
+
+            :rocket: The following files will be applied to the database when this PR is merged:
+            ${{ steps.dry_run.outputs.files }}
+
+      - name: Update PR with comment (migration steps - no changes)
+        if: ${{ steps.dry_run.outputs.files == '' }}
+        uses: mshick/add-pr-comment@v2
+        with:
+          refresh-message-position: true
+          message-id: "migrations"
+          message: |
+            :game_die: **Database migration summary**
+
+            :white_check_mark: All migrations have been already applied to the database.
