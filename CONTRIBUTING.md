@@ -7,7 +7,7 @@
 5. Push to the branch: `git push origin my-new-feature`
 6. Submit a pull request
 
-- The pull request and commit should have a useful title.
+- The pull request and commit should have a helpful title.
 
 **After your pull request is merged**
 
