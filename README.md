@@ -13,3 +13,5 @@ This is a **template repository** that sets the basic code and infrastructure fo
 ## License
 
 Licensed under: **MIT license** ([LICENSE](https://github.com/guibranco/api-service-boilerplate-php/blob/main/LICENSE) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT)).
+
+This will also be your project's **LICENSE**, but you can change it to another one that suits your needs.
