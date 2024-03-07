@@ -1,3 +1,5 @@
-theme: jekyll-theme-midnight
-title: API + service/worker boilerplate template
+theme: jekyll-theme-minimal
+title: API + service/worker boilerplate template PHP
 description: 💡 🏗️ A boilerplate API + service/worker template for PHP
+logo: https://raw.githubusercontent.com/GuilhermeStracini/api-service-boilerplate-php/main/logo.png
+show_downloads: true
