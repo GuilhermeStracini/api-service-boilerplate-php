@@ -1,16 +1,16 @@
 #!/bin/bash
 
 echo "Enter the project name:"
-read project_name
+read -r project_name
 
 echo "Enter the default namespace:"
-read namespace
+read -r namespace
 
 echo "Enter the SonarCloud URL:"
-read sonarcloud_url
+read -r sonarcloud_url
 
 echo "Enter the HealthChecks.io ID:"
-read healthchecks_id
+read -r healthchecks_id
 
 echo "Setting up project: $project_name"
 
