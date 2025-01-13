@@ -14,7 +14,7 @@ services:
 
   database:
     container_name: database
-    image: mysql:5.7
+    image: mariadb:11.6.2
     restart: always
     ports:
       - "3306:3306"
