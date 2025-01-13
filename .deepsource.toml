@@ -1,11 +1,12 @@
 version = 1
 
-# Uncomment this line once you have added tests to the project.
+# Uncomment these lines once you have added tests to the project.
 # [[analyzers]]
 # name = "test-coverage"
 
-[[analyzers]]
-name = "sql"
+# Uncomment these lines once you have added SQL code tho the proejct.
+# [[analyzers]]
+# name = "sql"
 
 [[analyzers]]
 name = "secrets"
