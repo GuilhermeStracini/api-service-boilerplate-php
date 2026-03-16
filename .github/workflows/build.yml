@@ -87,7 +87,7 @@ jobs:
 
       - name: Update PR with comment (request tests - failed)
         if: failure() && steps.test_requests.outputs.error == 'true'
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           refresh-message-position: true
           message-id: "requests"
@@ -109,7 +109,7 @@ jobs:
 
       - name: Update PR with comment (request tests - successed)
         if: success()
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           refresh-message-position: true
           message-id: "requests"
@@ -150,7 +150,7 @@ jobs:
                 
       - name: Update PR with comment (migration error)
         if: failure() && env.db_migration_error == 'true'
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           refresh-message-position: true
           message-id: "migrations"
@@ -162,7 +162,7 @@ jobs:
 
       - name: Update PR with comment (migration steps - changed)
         if: ${{ steps.dry_run.outputs.files != '' }}
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           refresh-message-position: true
           message-id: "migrations"
@@ -174,7 +174,7 @@ jobs:
 
       - name: Update PR with comment (migration steps - no changes)
         if: ${{ steps.dry_run.outputs.files == '' }}
-        uses: mshick/add-pr-comment@v2
+        uses: mshick/add-pr-comment@v3
         with:
           refresh-message-position: true
           message-id: "migrations"
